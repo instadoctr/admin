@@ -6,7 +6,7 @@ frontend:
         - npm install
     build:
       commands:
-        - npx expo export:web
+        - npx expo export --platform web
   artifacts:
     baseDirectory: dist
     files:
