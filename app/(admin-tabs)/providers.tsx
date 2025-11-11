@@ -12,10 +12,14 @@ import {
 } from 'react-native';
 import { useState, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { adminAPI } from '@/services/api-client';
 import { Provider, ProviderDetails } from '@/types/admin.types';
 
 export default function ProvidersScreen() {
+  const router = useRouter();
+  const params = useLocalSearchParams();
+
   const [providers, setProviders] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -26,10 +30,23 @@ export default function ProvidersScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [selectedDocumentUrl, setSelectedDocumentUrl] = useState<string | null>(null);
+  const [documentViewerVisible, setDocumentViewerVisible] = useState(false);
 
   useEffect(() => {
     fetchProviders();
   }, []);
+
+  // Open provider details from URL parameter
+  useEffect(() => {
+    const providerId = params.providerId as string;
+    if (providerId && providers.length > 0) {
+      const provider = providers.find(p => p.providerId === providerId);
+      if (provider) {
+        openProviderDetails(provider);
+      }
+    }
+  }, [params.providerId, providers]);
 
   const fetchProviders = async () => {
     try {
@@ -39,8 +56,27 @@ export default function ProvidersScreen() {
       const response = await adminAPI.getPendingProviders();
 
       if (response.success && response.data) {
-        setProviders(response.data.providers);
-        console.log('[Providers] Loaded', response.data.count, 'pending providers');
+        // Ensure providers is an array and clean the data
+        const providersData = Array.isArray(response.data.providers) ? response.data.providers : [];
+
+        // Clean each provider object to ensure all fields are primitives
+        const cleanProviders = providersData.map((p: any) => ({
+          providerId: String(p.providerId || ''),
+          userId: String(p.userId || ''),
+          name: String(p.name || ''),
+          phoneNumber: String(p.phoneNumber || ''),
+          providerType: String(p.providerType || ''),
+          specialization: p.specialization ? String(p.specialization) : undefined,
+          licenseNumber: p.licenseNumber ? String(p.licenseNumber) : undefined,
+          documentCount: Number(p.documentCount || 0),
+          profilePhotoUrl: p.profilePhotoUrl ? String(p.profilePhotoUrl) : undefined,
+          verificationStatus: p.verificationStatus || 'pending',
+          submittedAt: p.submittedAt ? String(p.submittedAt) : undefined,
+          createdAt: String(p.createdAt || ''),
+        }));
+
+        setProviders(cleanProviders);
+        console.log('[Providers] Loaded', cleanProviders.length, 'pending providers');
       } else {
         setError(response.error || 'Failed to load providers');
       }
@@ -60,24 +96,56 @@ export default function ProvidersScreen() {
 
   const openProviderDetails = async (provider: Provider) => {
     try {
+      // Update URL with providerId
+      router.setParams({ providerId: provider.providerId });
+
       setModalVisible(true);
       setModalLoading(true);
 
       const response = await adminAPI.getProviderDetails(provider.providerId);
 
       if (response.success && response.data) {
-        setSelectedProvider(response.data.provider);
+        const p = response.data.provider;
+
+        // Clean the provider data to ensure no nested objects are rendered as children
+        const cleanProvider = {
+          ...p,
+          name: String(p.name || ''),
+          phoneNumber: String(p.phoneNumber || ''),
+          email: p.email ? String(p.email) : undefined,
+          providerType: String(p.providerType || ''),
+          specialization: p.specialization ? String(p.specialization) : undefined,
+          experience: p.experience ? Number(p.experience) : undefined,
+          licenseNumber: p.licenseNumber ? String(p.licenseNumber) : undefined,
+          qualification: p.qualification ? String(p.qualification) : undefined,
+          profilePhotoUrl: p.profilePhotoUrl ? String(p.profilePhotoUrl) : undefined,
+          profilePhotoSignedUrl: p.profilePhotoSignedUrl ? String(p.profilePhotoSignedUrl) : undefined,
+          // Ensure documents is an array
+          documents: Array.isArray(p.documents) ? p.documents : [],
+        };
+
+        console.log('[Providers] Loaded details for', cleanProvider.providerId, 'with', cleanProvider.documents.length, 'documents');
+        setSelectedProvider(cleanProvider);
       } else {
         alert('Failed to load provider details');
         setModalVisible(false);
+        router.setParams({ providerId: undefined });
       }
     } catch (err: any) {
       console.error('[Providers] Error loading details:', err);
       alert('Failed to load provider details');
       setModalVisible(false);
+      router.setParams({ providerId: undefined });
     } finally {
       setModalLoading(false);
     }
+  };
+
+  const closeProviderModal = () => {
+    setModalVisible(false);
+    setSelectedProvider(null);
+    // Clear providerId from URL
+    router.setParams({ providerId: undefined });
   };
 
   const handleVerify = async () => {
@@ -90,7 +158,7 @@ export default function ProvidersScreen() {
 
       if (response.success) {
         alert('Provider verified successfully!');
-        setModalVisible(false);
+        closeProviderModal();
         fetchProviders(); // Refresh list
       } else {
         alert('Failed to verify provider: ' + response.error);
@@ -116,7 +184,7 @@ export default function ProvidersScreen() {
 
       if (response.success) {
         alert('Provider rejected');
-        setModalVisible(false);
+        closeProviderModal();
         fetchProviders(); // Refresh list
       } else {
         alert('Failed to reject provider: ' + response.error);
@@ -127,6 +195,16 @@ export default function ProvidersScreen() {
     } finally {
       setActionLoading(false);
     }
+  };
+
+  const openDocumentViewer = (url: string) => {
+    setSelectedDocumentUrl(url);
+    setDocumentViewerVisible(true);
+  };
+
+  const closeDocumentViewer = () => {
+    setDocumentViewerVisible(false);
+    setSelectedDocumentUrl(null);
   };
 
   const formatDate = (dateStr: string) => {
@@ -223,7 +301,7 @@ export default function ProvidersScreen() {
       </ScrollView>
 
       {/* Provider Details Modal */}
-      <Modal visible={modalVisible} animationType="slide" onRequestClose={() => setModalVisible(false)}>
+      <Modal visible={modalVisible} animationType="slide" onRequestClose={closeProviderModal}>
         <View style={styles.modalContainer}>
           {modalLoading ? (
             <View style={styles.modalLoading}>
@@ -233,7 +311,7 @@ export default function ProvidersScreen() {
           ) : selectedProvider ? (
             <>
               <View style={styles.modalHeader}>
-                <TouchableOpacity onPress={() => setModalVisible(false)}>
+                <TouchableOpacity onPress={closeProviderModal}>
                   <Ionicons name="close" size={28} color="#1a1a1a" />
                 </TouchableOpacity>
                 <Text style={styles.modalTitle}>Provider Details</Text>
@@ -299,21 +377,35 @@ export default function ProvidersScreen() {
 
                 {/* Documents */}
                 <View style={styles.modalSection}>
-                  <Text style={styles.modalSectionTitle}>Documents ({selectedProvider.documents?.length || 0})</Text>
-                  {selectedProvider.documents?.map((doc, index) => (
-                    <View key={index} style={styles.documentItem}>
-                      <Ionicons name="document" size={20} color="#007AFF" />
-                      <View style={styles.documentInfo}>
-                        <Text style={styles.documentType}>{doc.type}</Text>
-                        <Text style={styles.documentFilename}>{doc.filename}</Text>
-                      </View>
-                      {doc.signedUrl && (
-                        <TouchableOpacity onPress={() => Platform.OS === 'web' && window.open(doc.signedUrl, '_blank')}>
-                          <Ionicons name="open-outline" size={20} color="#007AFF" />
+                  <Text style={styles.modalSectionTitle}>
+                    Documents ({Array.isArray(selectedProvider.documents) ? selectedProvider.documents.length : 0})
+                  </Text>
+                  {Array.isArray(selectedProvider.documents) && selectedProvider.documents.length > 0 ? (
+                    selectedProvider.documents.map((doc: any, index: number) => {
+                      // Handle both old format (documentType, fileName) and new format (type, filename)
+                      const docType = String(doc.type || doc.documentType || 'Document');
+                      const docFilename = String(doc.filename || doc.fileName || 'File');
+                      const docUrl = doc.signedUrl || null;
+
+                      return (
+                        <TouchableOpacity
+                          key={index}
+                          style={styles.documentItem}
+                          onPress={() => docUrl && openDocumentViewer(docUrl)}
+                          disabled={!docUrl}
+                        >
+                          <Ionicons name="document" size={20} color="#007AFF" />
+                          <View style={styles.documentInfo}>
+                            <Text style={styles.documentType}>{docType}</Text>
+                            <Text style={styles.documentFilename}>{docFilename}</Text>
+                          </View>
+                          {docUrl && <Ionicons name="chevron-forward" size={20} color="#007AFF" />}
                         </TouchableOpacity>
-                      )}
-                    </View>
-                  ))}
+                      );
+                    })
+                  ) : (
+                    <Text style={styles.emptyText}>No documents uploaded</Text>
+                  )}
                 </View>
               </ScrollView>
 
@@ -351,6 +443,34 @@ export default function ProvidersScreen() {
               </View>
             </>
           ) : null}
+        </View>
+      </Modal>
+
+      {/* Document Viewer Modal */}
+      <Modal
+        visible={documentViewerVisible}
+        animationType="fade"
+        onRequestClose={closeDocumentViewer}
+        transparent={true}
+      >
+        <View style={styles.documentViewerOverlay}>
+          <View style={styles.documentViewerContainer}>
+            <View style={styles.documentViewerHeader}>
+              <Text style={styles.documentViewerTitle}>Document Preview</Text>
+              <TouchableOpacity onPress={closeDocumentViewer} style={styles.closeButton}>
+                <Ionicons name="close" size={28} color="#fff" />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.documentViewerContent}>
+              {selectedDocumentUrl && (
+                <Image
+                  source={{ uri: selectedDocumentUrl }}
+                  style={styles.documentImage}
+                  resizeMode="contain"
+                />
+              )}
+            </View>
+          </View>
         </View>
       </Modal>
     </View>
@@ -581,6 +701,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
   },
+  emptyText: {
+    fontSize: 14,
+    color: '#999',
+    fontStyle: 'italic',
+    textAlign: 'center',
+    paddingVertical: 12,
+  },
   modalActions: {
     flexDirection: 'row',
     gap: 12,
@@ -607,5 +734,44 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  // Document Viewer Styles
+  documentViewerOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  documentViewerContainer: {
+    width: '90%',
+    height: '90%',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  documentViewerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: '#1a1a1a',
+  },
+  documentViewerTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  closeButton: {
+    padding: 4,
+  },
+  documentViewerContent: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  documentImage: {
+    width: '100%',
+    height: '100%',
   },
 });

@@ -1,11 +1,44 @@
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/auth-context';
+import { useState, useEffect } from 'react';
+import { adminAPI } from '@/services/api-client';
 
 export default function DashboardScreen() {
   const router = useRouter();
   const { user, signOut } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [dashboardStats, setDashboardStats] = useState<{
+    newSignups: number;
+    pendingProviders: number;
+    labBookings: number;
+    revenueToday: number;
+  } | null>(null);
+
+  useEffect(() => {
+    fetchDashboardStats();
+  }, []);
+
+  const fetchDashboardStats = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await adminAPI.getDashboardStats();
+
+      if (response.success && response.data) {
+        setDashboardStats(response.data.stats);
+      } else {
+        setError(response.error || 'Failed to load dashboard stats');
+      }
+    } catch (err: any) {
+      console.error('[Dashboard] Error fetching stats:', err);
+      setError(err.message || 'Failed to load dashboard stats');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleLogout = () => {
     if (confirm('Are you sure you want to logout?')) {
@@ -13,15 +46,54 @@ export default function DashboardScreen() {
       router.replace('/login');
     }
   };
+
   const stats = [
-    { id: 1, title: 'New Signups', value: '24', change: '+12%', icon: 'person-add', color: '#34C759' },
-    { id: 2, title: 'Pending Providers', value: '8', change: '', icon: 'medical', color: '#FF9500' },
-    { id: 3, title: 'Lab Bookings', value: '15', change: '+5%', icon: 'flask', color: '#007AFF' },
-    { id: 4, title: 'Revenue Today', value: '₹12,450', change: '+18%', icon: 'cash', color: '#34C759' },
+    {
+      id: 1,
+      title: 'New Signups (7d)',
+      value: loading ? '...' : (dashboardStats?.newSignups.toString() || '0'),
+      change: '',
+      icon: 'person-add',
+      color: '#34C759'
+    },
+    {
+      id: 2,
+      title: 'Pending Providers',
+      value: loading ? '...' : (dashboardStats?.pendingProviders.toString() || '0'),
+      change: '',
+      icon: 'medical',
+      color: '#FF9500'
+    },
+    {
+      id: 3,
+      title: 'Lab Bookings (30d)',
+      value: loading ? '...' : (dashboardStats?.labBookings.toString() || '0'),
+      change: '',
+      icon: 'flask',
+      color: '#007AFF'
+    },
+    {
+      id: 4,
+      title: 'Revenue Today',
+      value: loading ? '...' : (dashboardStats ? `₹${dashboardStats.revenueToday.toLocaleString()}` : '₹0'),
+      change: '',
+      icon: 'cash',
+      color: '#34C759'
+    },
   ];
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      {/* Error Banner */}
+      {error && (
+        <View style={styles.errorBanner}>
+          <Text style={styles.errorText}>⚠️ {error}</Text>
+          <TouchableOpacity onPress={fetchDashboardStats}>
+            <Text style={styles.retryText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       {/* User Info and Logout */}
       <View style={styles.userBar}>
         <View>
@@ -195,5 +267,27 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#999',
     fontStyle: 'italic',
+  },
+  errorBanner: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#ffebee',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: '#f44336',
+  },
+  errorText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#c62828',
+  },
+  retryText: {
+    fontSize: 14,
+    color: '#1976d2',
+    fontWeight: '600',
+    marginLeft: 12,
   },
 });

@@ -133,34 +133,91 @@ class AdminAPIClient {
   }
 
   // ========================================
-  // Lab Test Management Endpoints (TODO)
+  // Appointments Management Endpoints
   // ========================================
 
-  // async getLabOrders(): Promise<APIResponse<any>> {
-  //   return this.authenticatedRequest('/admin/lab-orders', {
-  //     method: 'GET',
-  //   });
-  // }
+  /**
+   * Get list of appointments
+   */
+  async getAppointments(status?: string): Promise<APIResponse<{
+    appointments: any[];
+    count: number;
+  }>> {
+    const queryParams = status ? `?status=${status}` : '';
+    return this.authenticatedRequest(`/admin/appointments${queryParams}`, {
+      method: 'GET',
+    });
+  }
+
+  /**
+   * Update appointment status
+   */
+  async updateAppointmentStatus(appointmentId: string, status: string, notes?: string): Promise<APIResponse<{
+    message: string;
+    appointment: any;
+  }>> {
+    return this.authenticatedRequest(`/admin/appointments/${appointmentId}/status`, {
+      method: 'POST',
+      body: JSON.stringify({
+        status,
+        notes,
+      }),
+    });
+  }
 
   // ========================================
-  // Cancellation Management Endpoints (TODO)
+  // Lab Test Management Endpoints
   // ========================================
 
-  // async getCancellationRequests(): Promise<APIResponse<any>> {
-  //   return this.authenticatedRequest('/admin/cancellations', {
-  //     method: 'GET',
-  //   });
-  // }
+  /**
+   * Get list of lab orders
+   */
+  async getLabOrders(status?: string): Promise<APIResponse<{
+    labOrders: any[];
+    count: number;
+  }>> {
+    const queryParams = status ? `?status=${status}` : '';
+    return this.authenticatedRequest(`/admin/lab-orders${queryParams}`, {
+      method: 'GET',
+    });
+  }
+
+  /**
+   * Update lab order status
+   */
+  async updateLabOrderStatus(orderId: string, status: string, notes?: string): Promise<APIResponse<{
+    message: string;
+    order: any;
+  }>> {
+    return this.authenticatedRequest(`/admin/lab-orders/${orderId}/status`, {
+      method: 'POST',
+      body: JSON.stringify({
+        status,
+        notes,
+      }),
+    });
+  }
 
   // ========================================
-  // Dashboard & Analytics Endpoints (TODO)
+  // Dashboard & Analytics Endpoints
   // ========================================
 
-  // async getDashboardStats(): Promise<APIResponse<any>> {
-  //   return this.authenticatedRequest('/admin/dashboard/stats', {
-  //     method: 'GET',
-  //   });
-  // }
+  /**
+   * Get dashboard statistics
+   */
+  async getDashboardStats(): Promise<APIResponse<{
+    stats: {
+      newSignups: number;
+      pendingProviders: number;
+      labBookings: number;
+      revenueToday: number;
+    };
+    timestamp: string;
+  }>> {
+    return this.authenticatedRequest('/admin/dashboard/stats', {
+      method: 'GET',
+    });
+  }
 }
 
 export const adminAPI = new AdminAPIClient();

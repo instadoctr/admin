@@ -40,15 +40,6 @@ export default function AdminTabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="lab-tests"
-        options={{
-          title: 'Lab Tests',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="flask" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
         name="appointments"
         options={{
           title: 'Appointments',
@@ -58,12 +49,24 @@ export default function AdminTabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="cancellations"
+        name="lab-tests"
         options={{
-          title: 'Cancellations',
+          title: 'Lab Tests',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="close-circle" size={size} color={color} />
+            <Ionicons name="flask" size={size} color={color} />
           ),
+        }}
+      />
+      <Tabs.Screen
+        name="appointment-details"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="lab-order-details"
+        options={{
+          href: null,
         }}
       />
     </Tabs>
