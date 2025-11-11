@@ -1,5 +1,6 @@
 import Constants from 'expo-constants';
 import { authService } from './auth-service';
+import { router } from 'expo-router';
 
 const API_URL = Constants.expoConfig?.extra?.API_URL || process.env.EXPO_PUBLIC_API_URL;
 
@@ -33,6 +34,8 @@ class AdminAPIClient {
       const idToken = await authService.getIdToken();
 
       if (!idToken) {
+        console.log('[API] No ID token found - redirecting to login');
+        router.replace('/login');
         throw new Error('Not authenticated');
       }
 
@@ -53,6 +56,19 @@ class AdminAPIClient {
 
       if (!response.ok) {
         console.error('[API] Request failed:', response.status, data);
+
+        // Handle 401 Unauthorized - session expired or invalid
+        if (response.status === 401) {
+          console.log('[API] Unauthorized - redirecting to login');
+          authService.signOut();
+          router.replace('/login');
+          return {
+            success: false,
+            error: 'Session expired. Please login again.',
+            message: 'Unauthorized',
+          };
+        }
+
         return {
           success: false,
           error: data.message || data.error || 'Request failed',

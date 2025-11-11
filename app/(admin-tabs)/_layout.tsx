@@ -1,7 +1,34 @@
-import { Tabs } from 'expo-router';
+import { Tabs, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { useEffect } from 'react';
+import { useAuth } from '@/contexts/auth-context';
 
 export default function AdminTabsLayout() {
+  const router = useRouter();
+  const { isAuthenticated, loading } = useAuth();
+
+  useEffect(() => {
+    if (!loading && !isAuthenticated) {
+      console.log('[AdminTabs] User not authenticated, redirecting to login');
+      router.replace('/login');
+    }
+  }, [loading, isAuthenticated]);
+
+  // Show loading spinner while checking authentication
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#007AFF" />
+      </View>
+    );
+  }
+
+  // Don't render tabs if not authenticated (will redirect)
+  if (!isAuthenticated) {
+    return null;
+  }
+
   return (
     <Tabs
       screenOptions={{
@@ -72,3 +99,12 @@ export default function AdminTabsLayout() {
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f8f9fa',
+  },
+});
