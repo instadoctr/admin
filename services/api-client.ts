@@ -201,15 +201,16 @@ class AdminAPIClient {
   // ========================================
 
   /**
-   * Get list of all providers (for provider assignment)
+   * Get list of all providers with optional status filter
+   * @param status Optional filter: 'pending', 'verified', or 'rejected'
    */
-  async getAllProviders(): Promise<APIResponse<{
+  async getAllProviders(status?: 'pending' | 'verified' | 'rejected'): Promise<APIResponse<{
     providers: any[];
-    total: number;
-    returned: number;
+    count: number;
+    status: string;
   }>> {
-    // Use admin API endpoint with admin authorizer
-    return this.authenticatedRequest('/admin/providers/list', {
+    const queryParams = status ? `?status=${status}` : '';
+    return this.authenticatedRequest(`/admin/providers/list${queryParams}`, {
       method: 'GET',
     });
   }

@@ -21,7 +21,9 @@ export default function ProvidersScreen() {
   const params = useLocalSearchParams();
 
   const [providers, setProviders] = useState<Provider[]>([]);
+  const [verifiedProviders, setVerifiedProviders] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(false);
+  const [verifiedLoading, setVerifiedLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
 
@@ -35,6 +37,7 @@ export default function ProvidersScreen() {
 
   useEffect(() => {
     fetchProviders();
+    fetchVerifiedProviders();
   }, []);
 
   // Open provider details from URL parameter
@@ -89,9 +92,46 @@ export default function ProvidersScreen() {
     }
   };
 
+  const fetchVerifiedProviders = async () => {
+    try {
+      setVerifiedLoading(true);
+
+      const response = await adminAPI.getAllProviders('verified');
+
+      if (response.success && response.data) {
+        const providersData = Array.isArray(response.data.providers) ? response.data.providers : [];
+
+        const cleanProviders = providersData.map((p: any) => ({
+          providerId: String(p.providerId || ''),
+          userId: String(p.userId || ''),
+          name: String(p.name || ''),
+          phoneNumber: String(p.phoneNumber || ''),
+          providerType: String(p.providerType || ''),
+          specialization: p.specialization ? String(p.specialization) : undefined,
+          licenseNumber: p.licenseNumber ? String(p.licenseNumber) : undefined,
+          documentCount: Number(p.documentCount || 0),
+          profilePhotoUrl: p.profilePhotoUrl ? String(p.profilePhotoUrl) : undefined,
+          verificationStatus: p.verificationStatus || 'verified',
+          submittedAt: p.submittedAt ? String(p.submittedAt) : undefined,
+          createdAt: String(p.createdAt || ''),
+          verifiedAt: p.verifiedAt ? String(p.verifiedAt) : undefined,
+          verifiedBy: p.verifiedBy ? String(p.verifiedBy) : undefined,
+        }));
+
+        setVerifiedProviders(cleanProviders);
+        console.log('[Providers] Loaded', cleanProviders.length, 'verified providers');
+      }
+    } catch (err: any) {
+      console.error('[Providers] Error fetching verified:', err);
+    } finally {
+      setVerifiedLoading(false);
+    }
+  };
+
   const onRefresh = () => {
     setRefreshing(true);
     fetchProviders();
+    fetchVerifiedProviders();
   };
 
   const openProviderDetails = async (provider: Provider) => {
@@ -237,20 +277,6 @@ export default function ProvidersScreen() {
     );
   }
 
-  if (providers.length === 0) {
-    return (
-      <View style={styles.centerContainer}>
-        <Ionicons name="checkmark-circle" size={64} color="#34C759" />
-        <Text style={styles.emptyTitle}>All caught up!</Text>
-        <Text style={styles.emptySubtitle}>No pending provider applications</Text>
-        <TouchableOpacity style={styles.refreshButton} onPress={fetchProviders}>
-          <Ionicons name="refresh" size={20} color="#007AFF" />
-          <Text style={styles.refreshButtonText}>Refresh</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
   return (
     <View style={styles.container}>
       <ScrollView
@@ -261,7 +287,14 @@ export default function ProvidersScreen() {
           <Text style={styles.headerTitle}>Pending Providers ({providers.length})</Text>
         </View>
 
-        {providers.map((provider) => (
+        {providers.length === 0 ? (
+          <View style={styles.emptyPendingContainer}>
+            <Ionicons name="checkmark-circle" size={48} color="#34C759" />
+            <Text style={styles.emptyPendingTitle}>All caught up!</Text>
+            <Text style={styles.emptyPendingText}>No pending provider applications</Text>
+          </View>
+        ) : (
+          providers.map((provider) => (
           <TouchableOpacity
             key={provider.providerId}
             style={styles.providerCard}
@@ -297,7 +330,72 @@ export default function ProvidersScreen() {
               </View>
             </View>
           </TouchableOpacity>
-        ))}
+          ))
+        )}
+
+        {/* Verified Providers Section */}
+        <View style={styles.verifiedSection}>
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>Verified Providers ({verifiedProviders.length})</Text>
+          </View>
+
+          {verifiedLoading && verifiedProviders.length === 0 ? (
+            <View style={styles.sectionLoading}>
+              <ActivityIndicator size="small" color="#007AFF" />
+              <Text style={styles.loadingText}>Loading verified providers...</Text>
+            </View>
+          ) : verifiedProviders.length === 0 ? (
+            <View style={styles.emptyVerifiedContainer}>
+              <Text style={styles.emptyVerifiedText}>No verified providers yet</Text>
+            </View>
+          ) : (
+            verifiedProviders.map((provider) => (
+              <TouchableOpacity
+                key={provider.providerId}
+                style={styles.providerCard}
+                onPress={() => openProviderDetails(provider)}
+              >
+                <View style={styles.providerHeader}>
+                  <View style={styles.providerAvatar}>
+                    {provider.profilePhotoUrl ? (
+                      <Image source={{ uri: provider.profilePhotoUrl }} style={styles.avatarImage} />
+                    ) : (
+                      <Ionicons name="person" size={32} color="#666" />
+                    )}
+                  </View>
+                  <View style={styles.providerInfo}>
+                    <View style={styles.nameWithBadge}>
+                      <Text style={styles.providerName}>{provider.name}</Text>
+                      <View style={styles.verifiedBadge}>
+                        <Ionicons name="checkmark-circle" size={16} color="#34C759" />
+                        <Text style={styles.verifiedBadgeText}>Verified</Text>
+                      </View>
+                    </View>
+                    <Text style={styles.providerType}>
+                      {provider.providerType}
+                      {provider.specialization ? ` • ${provider.specialization}` : ''}
+                    </Text>
+                    <Text style={styles.providerPhone}>{provider.phoneNumber}</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color="#999" />
+                </View>
+
+                <View style={styles.providerFooter}>
+                  <View style={styles.footerItem}>
+                    <Ionicons name="document-text" size={16} color="#666" />
+                    <Text style={styles.footerText}>{provider.documentCount} docs</Text>
+                  </View>
+                  {provider.verifiedAt && (
+                    <View style={styles.footerItem}>
+                      <Ionicons name="shield-checkmark" size={16} color="#34C759" />
+                      <Text style={styles.footerText}>Verified {formatDate(provider.verifiedAt)}</Text>
+                    </View>
+                  )}
+                </View>
+              </TouchableOpacity>
+            ))
+          )}
+        </View>
       </ScrollView>
 
       {/* Provider Details Modal */}
@@ -773,5 +871,62 @@ const styles = StyleSheet.create({
   documentImage: {
     width: '100%',
     height: '100%',
+  },
+  verifiedSection: {
+    marginTop: 32,
+    paddingTop: 24,
+    borderTopWidth: 1,
+    borderTopColor: '#e9ecef',
+  },
+  sectionLoading: {
+    paddingVertical: 24,
+    alignItems: 'center',
+  },
+  emptyVerifiedContainer: {
+    paddingVertical: 32,
+    alignItems: 'center',
+  },
+  emptyVerifiedText: {
+    fontSize: 14,
+    color: '#999',
+  },
+  nameWithBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  verifiedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#34C75915',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+    marginLeft: 8,
+  },
+  verifiedBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#34C759',
+    marginLeft: 4,
+  },
+  emptyPendingContainer: {
+    paddingVertical: 48,
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 12,
+  },
+  emptyPendingTitle: {
+    marginTop: 12,
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1a1a1a',
+  },
+  emptyPendingText: {
+    marginTop: 4,
+    fontSize: 14,
+    color: '#666',
   },
 });
