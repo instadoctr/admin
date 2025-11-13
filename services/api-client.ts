@@ -181,6 +181,39 @@ class AdminAPIClient {
     });
   }
 
+  /**
+   * Assign provider to unassigned appointment
+   */
+  async assignProvider(appointmentId: string, providerId: string): Promise<APIResponse<{
+    message: string;
+    appointment: any;
+  }>> {
+    return this.authenticatedRequest(`/admin/appointments/${appointmentId}/assign-provider`, {
+      method: 'POST',
+      body: JSON.stringify({
+        providerId,
+      }),
+    });
+  }
+
+  // ========================================
+  // Provider Listing (for assignment)
+  // ========================================
+
+  /**
+   * Get list of all providers (for provider assignment)
+   */
+  async getAllProviders(): Promise<APIResponse<{
+    providers: any[];
+    total: number;
+    returned: number;
+  }>> {
+    // Use admin API endpoint with admin authorizer
+    return this.authenticatedRequest('/admin/providers/list', {
+      method: 'GET',
+    });
+  }
+
   // ========================================
   // Lab Test Management Endpoints
   // ========================================
