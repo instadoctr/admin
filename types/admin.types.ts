@@ -57,3 +57,45 @@ export interface UserProfile {
   onboardingCompleted?: boolean;
   createdAt: string;
 }
+
+// ========================================
+// User Activity Types
+// ========================================
+
+export interface ActivityEventPreview {
+  eventType: string;
+  screenName?: string;
+  action?: string;
+  serverTimestamp: string;
+}
+
+export interface ActivityUser {
+  userId: string;
+  name: string;
+  phoneNumber: string;
+  userType: string;
+  createdAt: string;
+  lastActivityAt?: string;
+  recentEvents: ActivityEventPreview[];
+}
+
+export interface ActivityEvent {
+  userId: string;
+  eventId: string;
+  eventType: string;
+  timestamp: string;
+  serverTimestamp: string;
+  screenName?: string;
+  action?: string;
+  metadata?: Record<string, unknown>;
+  'timestamp#eventId': string;
+}
+
+export interface UserActivitySummary {
+  userId: string;
+  name: string;
+  phoneNumber: string;
+  createdAt: string;
+  lastActivityAt?: string;
+  totalEvents: number;
+}

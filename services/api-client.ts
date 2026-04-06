@@ -268,6 +268,55 @@ class AdminAPIClient {
       method: 'GET',
     });
   }
+
+  // ========================================
+  // User Activity Endpoints
+  // ========================================
+
+  /**
+   * Get list of users with activity previews
+   */
+  async getActivityUsers(params?: {
+    search?: string;
+    limit?: number;
+    lastKey?: string;
+  }): Promise<APIResponse<{
+    users: any[];
+    count: number;
+    lastEvaluatedKey?: string;
+  }>> {
+    const queryParts: string[] = [];
+    if (params?.search) queryParts.push(`search=${encodeURIComponent(params.search)}`);
+    if (params?.limit) queryParts.push(`limit=${params.limit}`);
+    if (params?.lastKey) queryParts.push(`lastKey=${encodeURIComponent(params.lastKey)}`);
+    const queryString = queryParts.length > 0 ? `?${queryParts.join('&')}` : '';
+    return this.authenticatedRequest(`/admin/activity/users${queryString}`, {
+      method: 'GET',
+    });
+  }
+
+  /**
+   * Get user activity timeline
+   */
+  async getUserTimeline(userId: string, params?: {
+    limit?: number;
+    lastKey?: string;
+    eventType?: string;
+  }): Promise<APIResponse<{
+    user: any;
+    events: any[];
+    count: number;
+    lastEvaluatedKey?: string;
+  }>> {
+    const queryParts: string[] = [];
+    if (params?.limit) queryParts.push(`limit=${params.limit}`);
+    if (params?.lastKey) queryParts.push(`lastKey=${encodeURIComponent(params.lastKey)}`);
+    if (params?.eventType) queryParts.push(`eventType=${encodeURIComponent(params.eventType)}`);
+    const queryString = queryParts.length > 0 ? `?${queryParts.join('&')}` : '';
+    return this.authenticatedRequest(`/admin/activity/users/${userId}${queryString}`, {
+      method: 'GET',
+    });
+  }
 }
 
 export const adminAPI = new AdminAPIClient();

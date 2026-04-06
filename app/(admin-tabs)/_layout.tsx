@@ -85,7 +85,22 @@ export default function AdminTabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="user-activity"
+        options={{
+          title: 'Activity',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="footsteps" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="appointment-details"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="user-activity-details"
         options={{
           href: null,
         }}
