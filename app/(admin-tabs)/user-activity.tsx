@@ -72,6 +72,7 @@ export default function UserActivityScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [lastKey, setLastKey] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
+  const [sortByActivity, setSortByActivity] = useState(false);
 
   useEffect(() => {
     fetchUsers();
@@ -206,6 +207,17 @@ export default function UserActivityScreen() {
         </View>
       </View>
 
+      {/* Sort Toggle */}
+      <TouchableOpacity
+        style={[styles.sortButton, sortByActivity && styles.sortButtonActive]}
+        onPress={() => setSortByActivity(!sortByActivity)}
+      >
+        <Ionicons name="swap-vertical" size={16} color={sortByActivity ? '#fff' : '#007AFF'} />
+        <Text style={[styles.sortButtonText, sortByActivity && styles.sortButtonTextActive]}>
+          {sortByActivity ? 'Sorted by last active' : 'Sort by last active'}
+        </Text>
+      </TouchableOpacity>
+
       <ScrollView
         style={styles.scrollView}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
@@ -219,7 +231,15 @@ export default function UserActivityScreen() {
             )}
           </View>
         ) : (
-          users.map((user) => (
+          (sortByActivity
+            ? [...users].sort((a, b) => {
+                if (!a.lastActivityAt && !b.lastActivityAt) return 0;
+                if (!a.lastActivityAt) return 1;
+                if (!b.lastActivityAt) return -1;
+                return new Date(b.lastActivityAt).getTime() - new Date(a.lastActivityAt).getTime();
+              })
+            : users
+          ).map((user) => (
             <TouchableOpacity
               key={user.userId}
               style={styles.userCard}
@@ -306,6 +326,32 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+  },
+  sortButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    marginLeft: 16,
+    marginVertical: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#007AFF',
+    backgroundColor: '#fff',
+    gap: 4,
+  },
+  sortButtonActive: {
+    backgroundColor: '#007AFF',
+    borderColor: '#007AFF',
+  },
+  sortButtonText: {
+    fontSize: 13,
+    color: '#007AFF',
+    fontWeight: '500',
+  },
+  sortButtonTextActive: {
+    color: '#fff',
   },
   searchContainer: {
     backgroundColor: '#fff',
