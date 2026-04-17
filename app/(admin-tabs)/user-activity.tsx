@@ -8,11 +8,22 @@ import {
   RefreshControl,
   TextInput,
 } from 'react-native';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { adminAPI } from '@/services/api-client';
 import { ActivityUser, ActivityEventPreview } from '@/types/admin.types';
+import AddCreditsModal from '@/components/AddCreditsModal';
+
+type SortKey = 'last_active' | 'name_asc' | 'name_desc' | 'signup_newest' | 'signup_oldest';
+
+const SORT_OPTIONS: { key: SortKey; label: string }[] = [
+  { key: 'last_active', label: 'Last Active' },
+  { key: 'name_asc', label: 'Name A–Z' },
+  { key: 'name_desc', label: 'Name Z–A' },
+  { key: 'signup_newest', label: 'Newest' },
+  { key: 'signup_oldest', label: 'Oldest' },
+];
 
 function formatRelativeTime(isoString: string): string {
   try {
@@ -72,7 +83,11 @@ export default function UserActivityScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [lastKey, setLastKey] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
-  const [sortByActivity, setSortByActivity] = useState(false);
+  const [sortKey, setSortKey] = useState<SortKey>('last_active');
+
+  const [creditModalVisible, setCreditModalVisible] = useState(false);
+  const [creditModalUserId, setCreditModalUserId] = useState('');
+  const [creditModalUserName, setCreditModalUserName] = useState('');
 
   useEffect(() => {
     fetchUsers();
@@ -161,6 +176,29 @@ export default function UserActivityScreen() {
     return diffMs < 3600000; // within last hour
   };
 
+  const sortedUsers = useMemo(() => {
+    const copy = [...users];
+    switch (sortKey) {
+      case 'last_active':
+        return copy.sort((a, b) => {
+          if (!a.lastActivityAt && !b.lastActivityAt) return 0;
+          if (!a.lastActivityAt) return 1;
+          if (!b.lastActivityAt) return -1;
+          return new Date(b.lastActivityAt).getTime() - new Date(a.lastActivityAt).getTime();
+        });
+      case 'name_asc':
+        return copy.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+      case 'name_desc':
+        return copy.sort((a, b) => b.name.toLowerCase().localeCompare(a.name.toLowerCase()));
+      case 'signup_newest':
+        return copy.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      case 'signup_oldest':
+        return copy.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+      default:
+        return copy;
+    }
+  }, [users, sortKey]);
+
   if (loading && users.length === 0) {
     return (
       <View style={styles.centerContainer}>
@@ -207,22 +245,34 @@ export default function UserActivityScreen() {
         </View>
       </View>
 
-      {/* Sort Toggle */}
-      <TouchableOpacity
-        style={[styles.sortButton, sortByActivity && styles.sortButtonActive]}
-        onPress={() => setSortByActivity(!sortByActivity)}
+      {/* Sort Chips */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.sortScrollView}
+        contentContainerStyle={styles.sortScrollContent}
       >
-        <Ionicons name="swap-vertical" size={16} color={sortByActivity ? '#fff' : '#007AFF'} />
-        <Text style={[styles.sortButtonText, sortByActivity && styles.sortButtonTextActive]}>
-          {sortByActivity ? 'Sorted by last active' : 'Sort by last active'}
-        </Text>
-      </TouchableOpacity>
+        {SORT_OPTIONS.map(({ key, label }) => {
+          const isActive = sortKey === key;
+          return (
+            <TouchableOpacity
+              key={key}
+              style={[styles.sortChip, isActive && styles.sortChipActive]}
+              onPress={() => setSortKey(key)}
+            >
+              <Text style={[styles.sortChipText, isActive && styles.sortChipTextActive]}>
+                {label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
 
       <ScrollView
         style={styles.scrollView}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
-        {users.length === 0 && !loading ? (
+        {sortedUsers.length === 0 && !loading ? (
           <View style={styles.emptyContainer}>
             <Ionicons name="people-outline" size={48} color="#8E8E93" />
             <Text style={styles.emptyTitle}>No users found</Text>
@@ -231,15 +281,7 @@ export default function UserActivityScreen() {
             )}
           </View>
         ) : (
-          (sortByActivity
-            ? [...users].sort((a, b) => {
-                if (!a.lastActivityAt && !b.lastActivityAt) return 0;
-                if (!a.lastActivityAt) return 1;
-                if (!b.lastActivityAt) return -1;
-                return new Date(b.lastActivityAt).getTime() - new Date(a.lastActivityAt).getTime();
-              })
-            : users
-          ).map((user) => (
+          sortedUsers.map((user) => (
             <TouchableOpacity
               key={user.userId}
               style={styles.userCard}
@@ -287,6 +329,21 @@ export default function UserActivityScreen() {
                   })}
                 </View>
               )}
+
+              {/* Row 4: Card actions */}
+              <View style={styles.cardActions}>
+                <TouchableOpacity
+                  style={styles.addCreditsBtn}
+                  onPress={() => {
+                    setCreditModalUserId(user.userId);
+                    setCreditModalUserName(user.name);
+                    setCreditModalVisible(true);
+                  }}
+                >
+                  <Ionicons name="add-circle-outline" size={14} color="#34C759" />
+                  <Text style={styles.addCreditsBtnText}>Add Credits</Text>
+                </TouchableOpacity>
+              </View>
             </TouchableOpacity>
           ))
         )}
@@ -308,6 +365,13 @@ export default function UserActivityScreen() {
 
         <View style={styles.bottomSpacer} />
       </ScrollView>
+
+      <AddCreditsModal
+        visible={creditModalVisible}
+        onClose={() => setCreditModalVisible(false)}
+        userId={creditModalUserId}
+        userName={creditModalUserName}
+      />
     </View>
   );
 }
@@ -327,30 +391,34 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
-  sortButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    marginLeft: 16,
-    marginVertical: 8,
-    paddingHorizontal: 12,
+  sortScrollView: {
+    flexGrow: 0,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e9ecef',
+  },
+  sortScrollContent: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    gap: 8,
+  },
+  sortChip: {
+    paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: '#007AFF',
     backgroundColor: '#fff',
-    gap: 4,
   },
-  sortButtonActive: {
+  sortChipActive: {
     backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
   },
-  sortButtonText: {
+  sortChipText: {
     fontSize: 13,
-    color: '#007AFF',
     fontWeight: '500',
+    color: '#007AFF',
   },
-  sortButtonTextActive: {
+  sortChipTextActive: {
     color: '#fff',
   },
   searchContainer: {
@@ -433,6 +501,26 @@ const styles = StyleSheet.create({
   eventPillText: {
     fontSize: 11,
     fontWeight: '500',
+  },
+  cardActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 10,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+  },
+  addCreditsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  addCreditsBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#34C759',
   },
   loadMoreButton: {
     marginHorizontal: 16,

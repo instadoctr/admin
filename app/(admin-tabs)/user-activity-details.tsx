@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { adminAPI } from '@/services/api-client';
 import { ActivityEvent, UserActivitySummary } from '@/types/admin.types';
+import AddCreditsModal from '@/components/AddCreditsModal';
 
 // ========================================
 // Helper functions (copied from user-activity.tsx — no shared utils per plan scope)
@@ -120,6 +121,7 @@ export default function UserActivityDetailsScreen() {
   const [selectedEventType, setSelectedEventType] = useState<string | null>(null);
   const [lastKey, setLastKey] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
+  const [creditModalVisible, setCreditModalVisible] = useState(false);
 
   useEffect(() => {
     if (userId) {
@@ -243,7 +245,14 @@ export default function UserActivityDetailsScreen() {
           <Ionicons name="arrow-back" size={24} color="#1a1a1a" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>User Activity</Text>
-        <View style={styles.headerSpacer} />
+        <TouchableOpacity
+          onPress={() => setCreditModalVisible(true)}
+          style={styles.headerCreditsBtn}
+          disabled={!user}
+        >
+          <Ionicons name="add-circle-outline" size={20} color={user ? '#34C759' : '#ccc'} />
+          <Text style={[styles.headerCreditsBtnText, !user && { color: '#ccc' }]}>Credits</Text>
+        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -413,6 +422,13 @@ export default function UserActivityDetailsScreen() {
 
         <View style={styles.bottomSpacer} />
       </ScrollView>
+
+      <AddCreditsModal
+        visible={creditModalVisible}
+        onClose={() => setCreditModalVisible(false)}
+        userId={userId || ''}
+        userName={user?.name || ''}
+      />
     </View>
   );
 }
@@ -449,8 +465,15 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#1a1a1a',
   },
-  headerSpacer: {
-    width: 32,
+  headerCreditsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  headerCreditsBtnText: {
+    fontSize: 13,
+    color: '#34C759',
+    fontWeight: '600',
   },
   scrollView: {
     flex: 1,
