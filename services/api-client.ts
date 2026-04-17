@@ -317,6 +317,30 @@ class AdminAPIClient {
       method: 'GET',
     });
   }
+
+  // ========================================
+  // Credits Management Endpoints
+  // ========================================
+
+  /**
+   * Add credits to a user's wallet (admin operation)
+   */
+  async creditUserWallet(
+    userId: string,
+    amount: number,
+    reason: string,
+    note?: string
+  ): Promise<APIResponse<{
+    message: string;
+    wallet: { balance: number; userId: string };
+    transaction: { transactionId: string; amount: number; type: string; createdAt: string };
+    user: { userId: string; name: string; phone: string };
+  }>> {
+    return this.authenticatedRequest(`/admin/users/${userId}/credits`, {
+      method: 'POST',
+      body: JSON.stringify({ amount, reason, note }),
+    });
+  }
 }
 
 export const adminAPI = new AdminAPIClient();

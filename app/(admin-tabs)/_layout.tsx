@@ -94,6 +94,15 @@ export default function AdminTabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="credits"
+        options={{
+          title: 'Credits',
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={focused ? 'wallet' : 'wallet-outline'} size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="appointment-details"
         options={{
           href: null,
