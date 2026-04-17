@@ -87,18 +87,9 @@ export default function AdminTabsLayout() {
       <Tabs.Screen
         name="user-activity"
         options={{
-          title: 'Activity',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="footsteps" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="credits"
-        options={{
-          title: 'Credits',
+          title: 'Users',
           tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons name={focused ? 'wallet' : 'wallet-outline'} size={size} color={color} />
+            <Ionicons name={focused ? 'people' : 'people-outline'} size={size} color={color} />
           ),
         }}
       />
