@@ -141,7 +141,7 @@ export default function AddCreditsModal({ visible, onClose, userId, userName }: 
               </View>
               <View style={styles.successRow}>
                 <Text style={styles.successLabel}>New Balance</Text>
-                <Text style={styles.successValue}>{successData.newBalance} impulses</Text>
+                <Text style={styles.successValue}>{successData.newBalance} credits</Text>
               </View>
               <View style={[styles.successRow, styles.successRowLast]}>
                 <Text style={styles.successLabel}>Transaction ID</Text>
@@ -158,7 +158,7 @@ export default function AddCreditsModal({ visible, onClose, userId, userName }: 
             /* Form */
             <>
               {/* Amount */}
-              <Text style={styles.label}>Amount (impulses) *</Text>
+              <Text style={styles.label}>Amount (credits) *</Text>
               <TextInput
                 style={styles.input}
                 value={amount}
