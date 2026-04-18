@@ -286,6 +286,12 @@ export default function UserActivityDetailsScreen() {
               <Text style={styles.summaryLabel}>Total events:</Text>
               <Text style={styles.summaryValue}>{user.totalEvents}</Text>
             </View>
+            {user.walletBalance !== undefined && (
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>Credits:</Text>
+                <Text style={styles.summaryValue}>{user.walletBalance}</Text>
+              </View>
+            )}
           </View>
         )}
 

@@ -98,4 +98,5 @@ export interface UserActivitySummary {
   createdAt: string;
   lastActivityAt?: string;
   totalEvents: number;
+  walletBalance?: number;
 }
