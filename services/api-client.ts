@@ -341,6 +341,34 @@ class AdminAPIClient {
       body: JSON.stringify({ amount, reason, note }),
     });
   }
+
+  // ========================================
+  // Package Viewing Endpoints
+  // ========================================
+
+  /**
+   * Get appointment packages for a user
+   */
+  async getUserPackages(userId: string, status?: 'active' | 'exhausted'): Promise<APIResponse<{
+    packages: Array<{
+      packageId: string;
+      providerId: string;
+      providerName: string;
+      tier: number;
+      totalSessions: number;
+      usedSessions: number;
+      sessionsRemaining: number;
+      tierLabel: string;
+      purchaseDate: string;
+      status: string;
+    }>;
+    count: number;
+  }>> {
+    const queryParams = status ? `?status=${status}` : '';
+    return this.authenticatedRequest(`/admin/users/${userId}/packages${queryParams}`, {
+      method: 'GET',
+    });
+  }
 }
 
 export const adminAPI = new AdminAPIClient();

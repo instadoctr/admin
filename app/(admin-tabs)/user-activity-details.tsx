@@ -122,10 +122,13 @@ export default function UserActivityDetailsScreen() {
   const [lastKey, setLastKey] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [creditModalVisible, setCreditModalVisible] = useState(false);
+  const [packages, setPackages] = useState<any[]>([]);
+  const [packagesLoading, setPackagesLoading] = useState(false);
 
   useEffect(() => {
     if (userId) {
       fetchTimeline();
+      fetchPackages();
     }
   }, [userId]);
 
@@ -178,6 +181,21 @@ export default function UserActivityDetailsScreen() {
     [userId, selectedEventType]
   );
 
+  const fetchPackages = useCallback(async () => {
+    if (!userId) return;
+    try {
+      setPackagesLoading(true);
+      const response = await adminAPI.getUserPackages(userId);
+      if (response.success && response.data) {
+        setPackages(response.data.packages || []);
+      }
+    } catch (err: any) {
+      console.error('[UserActivityDetails] Error loading packages:', err);
+    } finally {
+      setPackagesLoading(false);
+    }
+  }, [userId]);
+
   const loadMore = async () => {
     if (loadingMore || !hasMore || !lastKey || !userId) return;
 
@@ -214,6 +232,7 @@ export default function UserActivityDetailsScreen() {
     setLastKey(null);
     setHasMore(false);
     fetchTimeline(true);
+    fetchPackages();
   };
 
   if (loading && events.length === 0) {
@@ -291,6 +310,58 @@ export default function UserActivityDetailsScreen() {
                 <Text style={styles.summaryLabel}>Credits:</Text>
                 <Text style={styles.summaryValue}>{user.walletBalance}</Text>
               </View>
+            )}
+          </View>
+        )}
+
+        {/* Packages Section */}
+        {user && (
+          <View style={styles.packagesSection}>
+            <Text style={styles.packagesSectionTitle}>Packages</Text>
+            {packagesLoading ? (
+              <ActivityIndicator size="small" color="#007AFF" style={{ marginVertical: 12 }} />
+            ) : packages.length === 0 ? (
+              <Text style={styles.packagesEmptyText}>No packages</Text>
+            ) : (
+              packages.map((pkg) => (
+                <View key={pkg.packageId} style={styles.packageCard}>
+                  <View style={styles.packageCardHeader}>
+                    <Text style={styles.packageProviderName}>{pkg.providerName}</Text>
+                    <View style={[
+                      styles.packageStatusBadge,
+                      { backgroundColor: pkg.status === 'active' ? '#34C75926' : '#8E8E9326' }
+                    ]}>
+                      <Text style={[
+                        styles.packageStatusText,
+                        { color: pkg.status === 'active' ? '#34C759' : '#8E8E93' }
+                      ]}>
+                        {pkg.status === 'active' ? 'Active' : 'Exhausted'}
+                      </Text>
+                    </View>
+                  </View>
+                  <Text style={styles.packageTierLabel}>{pkg.tierLabel}</Text>
+                  <View style={styles.packageProgressRow}>
+                    <Text style={styles.packageProgressText}>
+                      {pkg.usedSessions} of {pkg.totalSessions} sessions used
+                    </Text>
+                    <Text style={styles.packageRemainingText}>
+                      {pkg.sessionsRemaining} remaining
+                    </Text>
+                  </View>
+                  <View style={styles.packageProgressBar}>
+                    <View style={[
+                      styles.packageProgressFill,
+                      {
+                        width: `${(pkg.usedSessions / pkg.totalSessions) * 100}%`,
+                        backgroundColor: pkg.status === 'active' ? '#34C759' : '#8E8E93',
+                      }
+                    ]} />
+                  </View>
+                  <Text style={styles.packagePurchaseDate}>
+                    Purchased {new Date(pkg.purchaseDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </Text>
+                </View>
+              ))
             )}
           </View>
         )}
@@ -688,5 +759,85 @@ const styles = StyleSheet.create({
   },
   bottomSpacer: {
     height: 24,
+  },
+  // Packages Section
+  packagesSection: {
+    marginHorizontal: 16,
+    marginTop: 12,
+  },
+  packagesSectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1a1a1a',
+    marginBottom: 8,
+  },
+  packagesEmptyText: {
+    fontSize: 14,
+    color: '#8E8E93',
+    fontStyle: 'italic',
+    marginBottom: 8,
+  },
+  packageCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+  },
+  packageCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  packageProviderName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1a1a1a',
+    flex: 1,
+  },
+  packageStatusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+  },
+  packageStatusText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  packageTierLabel: {
+    fontSize: 13,
+    color: '#666',
+    marginBottom: 8,
+  },
+  packageProgressRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  packageProgressText: {
+    fontSize: 13,
+    color: '#1a1a1a',
+  },
+  packageRemainingText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#007AFF',
+  },
+  packageProgressBar: {
+    height: 6,
+    backgroundColor: '#e9ecef',
+    borderRadius: 3,
+    overflow: 'hidden',
+    marginBottom: 8,
+  },
+  packageProgressFill: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  packagePurchaseDate: {
+    fontSize: 12,
+    color: '#999',
   },
 });
